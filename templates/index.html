@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>نظام إدارة المخزن</title>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏪</text></svg>">
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="spinner"></div>
+  <p style="color:#1E3A5F;font-weight:600;">جاري التحميل...</p>
+</div>
+
+<!-- TOAST -->
+<div id="toast-container"></div>
+
+<!-- MOBILE OVERLAY -->
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <div class="modal-title">⚠️ تأكيد</div>
+      <button class="modal-close" onclick="hideModal('confirm-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="text-align:center;padding:30px;">
+      <div style="font-size:48px;margin-bottom:16px;" id="confirm-icon">🗑️</div>
+      <p id="confirm-msg" style="font-size:15px;color:#2C3E50;font-weight:600;"></p>
+      <p style="color:#6c757d;font-size:13px;margin-top:8px;">لا يمكن التراجع عن هذا الإجراء</p>
+    </div>
+    <div class="modal-footer" style="justify-content:center;">
+      <button class="btn btn-danger" id="confirm-ok-btn">تأكيد</button>
+      <button class="btn btn-outline" onclick="hideModal('confirm-modal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW OPERATION MODAL -->
+<div class="modal-overlay" id="view-op-modal">
+  <div class="modal modal-xl">
+    <div class="modal-header">
+      <div class="modal-title">👁️ تفاصيل العملية</div>
+      <button class="modal-close" onclick="hideModal('view-op-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="view-op-content"></div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" id="view-op-print-btn">🖨️ طباعة PDF</button>
+      <button class="btn btn-outline" onclick="hideModal('view-op-modal')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- UNIT MODAL -->
+<div class="modal-overlay" id="unit-modal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <div class="modal-title">📏 <span id="unit-modal-title">إضافة وحدة قياس</span></div>
+      <button class="modal-close" onclick="hideModal('unit-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="unit-form">
+        <input type="hidden" id="unit-id">
+        <div class="form-group">
+          <label class="form-label">اسم الوحدة <span class="required">*</span></label>
+          <input type="text" id="unit-name" class="form-control" placeholder="مثال: كيلو، قطعة، لتر..." required>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveUnit()">💾 حفظ</button>
+      <button class="btn btn-outline" onclick="hideModal('unit-modal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- GROUP MODAL -->
+<div class="modal-overlay" id="group-modal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <div class="modal-title">🗂️ <span id="group-modal-title">إضافة مجموعة</span></div>
+      <button class="modal-close" onclick="hideModal('group-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="group-form">
+        <input type="hidden" id="group-id">
+        <div class="form-group">
+          <label class="form-label">اسم المجموعة <span class="required">*</span></label>
+          <input type="text" id="group-name" class="form-control" placeholder="مثال: مواد غذائية، أدوات..." required>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveGroup()">💾 حفظ</button>
+      <button class="btn btn-outline" onclick="hideModal('group-modal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- ITEM MODAL -->
+<div class="modal-overlay" id="item-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title">📦 <span id="item-modal-title">إضافة صنف</span></div>
+      <button class="modal-close" onclick="hideModal('item-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="item-form">
+        <input type="hidden" id="item-id">
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label class="form-label">اسم الصنف <span class="required">*</span></label>
+            <input type="text" id="item-name" class="form-control" placeholder="اسم الصنف" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">المجموعة</label>
+            <select id="item-group" class="form-control"><option value="">-- اختر المجموعة --</option></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">وحدة القياس</label>
+            <select id="item-unit" class="form-control"><option value="">-- اختر الوحدة --</option></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">الرصيد الافتتاحي</label>
+            <input type="number" id="item-opening" class="form-control" value="0" min="0" step="0.01">
+          </div>
+          <div class="form-group">
+            <label class="form-label">الحد الأدنى للتنبيه</label>
+            <input type="number" id="item-min" class="form-control" value="0" min="0" step="0.01">
+          </div>
+          <div class="form-group">
+            <label class="form-label">الملاحظات</label>
+            <input type="text" id="item-notes" class="form-control" placeholder="ملاحظات اختيارية">
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveItem()">💾 حفظ</button>
+      <button class="btn btn-outline" onclick="hideModal('item-modal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- CUSTOMER MODAL -->
+<div class="modal-overlay" id="customer-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title">👤 <span id="customer-modal-title">إضافة عميل</span></div>
+      <button class="modal-close" onclick="hideModal('customer-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="customer-form">
+        <input type="hidden" id="customer-id">
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label class="form-label">اسم العميل <span class="required">*</span></label>
+            <input type="text" id="customer-name" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">رقم الهاتف</label>
+            <input type="text" id="customer-phone" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">العنوان</label>
+            <input type="text" id="customer-address" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">الملاحظات</label>
+            <input type="text" id="customer-notes" class="form-control">
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveCustomer()">💾 حفظ</button>
+      <button class="btn btn-outline" onclick="hideModal('customer-modal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- SUPPLIER MODAL -->
+<div class="modal-overlay" id="supplier-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title">🏭 <span id="supplier-modal-title">إضافة مورد</span></div>
+      <button class="modal-close" onclick="hideModal('supplier-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="supplier-form">
+        <input type="hidden" id="supplier-id">
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label class="form-label">اسم المورد <span class="required">*</span></label>
+            <input type="text" id="supplier-name" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">رقم الهاتف</label>
+            <input type="text" id="supplier-phone" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">العنوان</label>
+            <input type="text" id="supplier-address" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">الملاحظات</label>
+            <input type="text" id="supplier-notes" class="form-control">
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveSupplier()">💾 حفظ</button>
+      <button class="btn btn-outline" onclick="hideModal('supplier-modal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- WAREHOUSE MODAL -->
+<div class="modal-overlay" id="warehouse-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title">🏪 <span id="warehouse-modal-title">إضافة مخزن</span></div>
+      <button class="modal-close" onclick="hideModal('warehouse-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="warehouse-form">
+        <input type="hidden" id="warehouse-id">
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label class="form-label">اسم المخزن <span class="required">*</span></label>
+            <input type="text" id="warehouse-name" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">الموقع</label>
+            <input type="text" id="warehouse-location" class="form-control">
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label class="form-label">الملاحظات</label>
+            <input type="text" id="warehouse-notes" class="form-control">
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveWarehouse()">💾 حفظ</button>
+      <button class="btn btn-outline" onclick="hideModal('warehouse-modal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- USER MODAL -->
+<div class="modal-overlay" id="user-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title">👤 <span id="user-modal-title">إضافة مستخدم</span></div>
+      <button class="modal-close" onclick="hideModal('user-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="user-form">
+        <input type="hidden" id="user-id">
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label class="form-label">اسم المستخدم <span class="required">*</span></label>
+            <input type="text" id="user-username" class="form-control" placeholder="للدخول للنظام" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">الاسم الكامل <span class="required">*</span></label>
+            <input type="text" id="user-fullname" class="form-control" required>
+          </div>
+          <div class="form-group" id="user-pass-group">
+            <label class="form-label">كلمة المرور <span class="required">*</span></label>
+            <input type="password" id="user-password" class="form-control" placeholder="6 أحرف على الأقل">
+          </div>
+          <div class="form-group">
+            <label class="form-label">الدور / الصلاحية <span class="required">*</span></label>
+            <select id="user-role" class="form-control">
+              <option value="admin">مدير النظام</option>
+              <option value="manager">مدير المخزن</option>
+              <option value="operator" selected>أمين المخزن</option>
+              <option value="viewer">مراقب (قراءة فقط)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">البريد الإلكتروني</label>
+            <input type="email" id="user-email" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">رقم الهاتف</label>
+            <input type="text" id="user-phone" class="form-control">
+          </div>
+          <div class="form-group" id="user-status-group" style="display:none">
+            <label class="form-label">الحالة</label>
+            <select id="user-status" class="form-control">
+              <option value="active">نشط</option>
+              <option value="inactive">غير نشط</option>
+            </select>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveUser()">💾 حفظ</button>
+      <button class="btn btn-outline" onclick="hideModal('user-modal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHANGE PASSWORD MODAL -->
+<div class="modal-overlay" id="change-pass-modal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <div class="modal-title">🔑 تغيير كلمة المرور</div>
+      <button class="modal-close" onclick="hideModal('change-pass-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">كلمة المرور الحالية</label>
+        <input type="password" id="cp-old" class="form-control">
+      </div>
+      <div class="form-group">
+        <label class="form-label">كلمة المرور الجديدة</label>
+        <input type="password" id="cp-new" class="form-control">
+      </div>
+      <div class="form-group">
+        <label class="form-label">تأكيد كلمة المرور الجديدة</label>
+        <input type="password" id="cp-confirm" class="form-control">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="doChangePassword()">💾 تغيير</button>
+      <button class="btn btn-outline" onclick="hideModal('change-pass-modal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- OPERATION MODAL -->
+<div class="modal-overlay" id="op-modal">
+  <div class="modal modal-xl">
+    <div class="modal-header">
+      <div class="modal-title">📋 <span id="op-modal-title">عملية جديدة</span></div>
+      <button class="modal-close" onclick="hideModal('op-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="op-type">
+      <form id="op-form">
+        <div class="form-row form-row-3" style="margin-bottom:16px;">
+          <div class="form-group">
+            <label class="form-label">التاريخ <span class="required">*</span></label>
+            <input type="date" id="op-date" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">المرجع (اختياري)</label>
+            <input type="text" id="op-ref" class="form-control" placeholder="سيتم توليده تلقائياً">
+          </div>
+          <div class="form-group" id="op-supplier-row" style="display:none">
+            <label class="form-label">المورد</label>
+            <select id="op-supplier" class="form-control"></select>
+          </div>
+          <div class="form-group" id="op-customer-row" style="display:none">
+            <label class="form-label">العميل</label>
+            <select id="op-customer" class="form-control"></select>
+          </div>
+          <div class="form-group" id="op-wh-from-row" style="display:none">
+            <label class="form-label" id="op-wh-from-label">المخزن من</label>
+            <select id="op-wh-from" class="form-control"></select>
+          </div>
+          <div class="form-group" id="op-wh-to-row" style="display:none">
+            <label class="form-label" id="op-wh-to-label">المخزن إلى</label>
+            <select id="op-wh-to" class="form-control"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">اسم المدير</label>
+            <input type="text" id="op-manager" class="form-control" placeholder="اسم المدير للطباعة">
+          </div>
+          <div class="form-group">
+            <label class="form-label">اسم المستلم</label>
+            <input type="text" id="op-receiver" class="form-control" placeholder="اسم المستلم للطباعة">
+          </div>
+          <div class="form-group">
+            <label class="form-label">الملاحظات</label>
+            <input type="text" id="op-notes" class="form-control" placeholder="ملاحظات اختيارية">
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-header">
+            <div class="card-title"><div class="icon">📦</div> إضافة الأصناف</div>
+          </div>
+          <div class="card-body">
+            <div class="op-items-add-row">
+              <div class="form-group" style="margin:0;flex:3">
+                <label class="form-label">الصنف</label>
+                <select id="op-item-select" class="form-control" onchange="onItemSelect()"></select>
+              </div>
+              <div class="form-group" style="margin:0;flex:1">
+                <label class="form-label">الوحدة</label>
+                <input type="text" id="op-item-unit" class="form-control" readonly placeholder="تلقائي">
+              </div>
+              <div class="form-group" style="margin:0;flex:1">
+                <label class="form-label">الرصيد</label>
+                <input type="text" id="op-item-stock" class="form-control" readonly placeholder="-">
+              </div>
+              <div class="form-group" style="margin:0;flex:1">
+                <label class="form-label">الكمية <span class="required">*</span></label>
+                <input type="number" id="op-item-qty" class="form-control" min="0.01" step="0.01" placeholder="0">
+              </div>
+              <div class="form-group" style="margin:0;flex:1">
+                <label class="form-label">السعر</label>
+                <input type="number" id="op-item-price" class="form-control" min="0" step="0.01" value="0">
+              </div>
+              <div style="padding-top:22px">
+                <button type="button" class="btn btn-success" onclick="addOpItem()">➕</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table class="op-items-table">
+            <thead>
+              <tr>
+                <th>رقم الصنف</th><th>اسم الصنف</th><th>الوحدة</th>
+                <th>الكمية</th><th>السعر</th><th>الإجمالي</th><th>حذف</th>
+              </tr>
+            </thead>
+            <tbody id="op-items-tbody">
+              <tr><td colspan="7" style="text-align:center;color:#6c757d;padding:16px;">لم يتم إضافة أصناف بعد</td></tr>
+            </tbody>
+            <tfoot>
+              <tr style="background:#1E3A5F;color:white;font-weight:700;">
+                <td colspan="5" style="text-align:center;padding:10px;">الإجمالي الكلي</td>
+                <td style="padding:10px;" id="op-total">0</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-success btn-lg" onclick="saveOperation()">💾 حفظ العملية</button>
+      <button class="btn btn-outline" onclick="hideModal('op-modal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">🏪</div>
+    <h2 id="company-name-display">نظام إدارة المخزن</h2>
+    <p>Warehouse Management System</p>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">الرئيسية</div>
+    <div class="nav-item active" data-page="dashboard" onclick="navigateTo('dashboard')">
+      <div class="nav-icon">🏠</div><span class="nav-label">لوحة التحكم</span>
+    </div>
+
+    <div class="nav-section">البيانات الأساسية</div>
+    <div class="nav-item" data-page="units" onclick="navigateTo('units')">
+      <div class="nav-icon">📏</div><span class="nav-label">وحدات القياس</span>
+    </div>
+    <div class="nav-item" data-page="groups" onclick="navigateTo('groups')">
+      <div class="nav-icon">🗂️</div><span class="nav-label">مجموعات الأصناف</span>
+    </div>
+    <div class="nav-item" data-page="items" onclick="navigateTo('items')">
+      <div class="nav-icon">📦</div><span class="nav-label">الأصناف</span>
+    </div>
+    <div class="nav-item" data-page="customers" onclick="navigateTo('customers')">
+      <div class="nav-icon">👥</div><span class="nav-label">العملاء</span>
+    </div>
+    <div class="nav-item" data-page="suppliers" onclick="navigateTo('suppliers')">
+      <div class="nav-icon">🏭</div><span class="nav-label">الموردون</span>
+    </div>
+    <div class="nav-item" data-page="warehouses" onclick="navigateTo('warehouses')">
+      <div class="nav-icon">🏪</div><span class="nav-label">المخازن</span>
+    </div>
+
+    <div class="nav-section">العمليات</div>
+    <div class="nav-item" data-page="supply" onclick="navigateTo('supply')">
+      <div class="nav-icon">⬇️</div><span class="nav-label">عمليات التوريد</span>
+    </div>
+    <div class="nav-item" data-page="issue" onclick="navigateTo('issue')">
+      <div class="nav-icon">⬆️</div><span class="nav-label">عمليات الصرف</span>
+    </div>
+    <div class="nav-item" data-page="transfer" onclick="navigateTo('transfer')">
+      <div class="nav-icon">🔄</div><span class="nav-label">عمليات التحويل</span>
+    </div>
+
+    <div class="nav-section">التقارير</div>
+    <div class="nav-item" data-page="report-stock" onclick="navigateTo('report-stock')">
+      <div class="nav-icon">📊</div><span class="nav-label">تقرير المخزون</span>
+    </div>
+    <div class="nav-item" data-page="report-movements" onclick="navigateTo('report-movements')">
+      <div class="nav-icon">📈</div><span class="nav-label">تقرير الحركات</span>
+    </div>
+    <div class="nav-item" data-page="report-operations" onclick="navigateTo('report-operations')">
+      <div class="nav-icon">📋</div><span class="nav-label">تقرير العمليات</span>
+    </div>
+
+    <div class="nav-section admin-only">إدارة النظام</div>
+    <div class="nav-item admin-only" data-page="users" onclick="navigateTo('users')">
+      <div class="nav-icon">👤</div><span class="nav-label">المستخدمون</span>
+    </div>
+    <div class="nav-item admin-only" data-page="activity" onclick="navigateTo('activity')">
+      <div class="nav-icon">📜</div><span class="nav-label">سجل النشاط</span>
+    </div>
+    <div class="nav-item" data-page="backup" onclick="navigateTo('backup')">
+      <div class="nav-icon">💾</div><span class="nav-label">النسخ الاحتياطي</span>
+    </div>
+    <div class="nav-item" data-page="settings" onclick="navigateTo('settings')">
+      <div class="nav-icon">⚙️</div><span class="nav-label">الإعدادات</span>
+    </div>
+  </nav>
+</aside>
+
+<!-- MAIN CONTENT -->
+<div class="main-content">
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+      <div class="topbar-title" id="topbar-title">لوحة التحكم</div>
+    </div>
+    <div class="topbar-actions">
+      <div class="topbar-date" id="current-date"></div>
+      <div class="user-menu" id="user-menu-wrap">
+        <button class="user-btn" onclick="toggleUserMenu()">
+          <span class="user-avatar" id="user-avatar">👤</span>
+          <span class="user-name" id="user-name-display">...</span>
+          <span>▾</span>
+        </button>
+        <div class="user-dropdown" id="user-dropdown">
+          <div class="user-dropdown-header" id="user-dropdown-info"></div>
+          <div class="user-dropdown-item" onclick="openChangePassword()">🔑 تغيير كلمة المرور</div>
+          <div class="user-dropdown-item danger" onclick="doLogout()">🚪 تسجيل الخروج</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- PAGES -->
+  <div class="page-content">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="welcome-banner">
+        <div>
+          <h1 id="welcome-msg">مرحباً بك في نظام إدارة المخزن</h1>
+          <p>إدارة متكاملة للمخزون مع ربط مباشر بملف Excel</p>
+        </div>
+        <div class="banner-icon">🏪</div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card blue"><div class="stat-icon">📦</div><div class="stat-info"><h3 id="stat-items">0</h3><p>إجمالي الأصناف</p></div></div>
+        <div class="stat-card red"><div class="stat-icon">⚠️</div><div class="stat-info"><h3 id="stat-low-stock">0</h3><p>أصناف تحت الحد الأدنى</p></div></div>
+        <div class="stat-card green"><div class="stat-icon">🏭</div><div class="stat-info"><h3 id="stat-suppliers">0</h3><p>الموردون</p></div></div>
+        <div class="stat-card orange"><div class="stat-icon">👥</div><div class="stat-info"><h3 id="stat-customers">0</h3><p>العملاء</p></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><div class="icon">📦</div> حالة المخزون</div>
+          <button class="btn btn-primary btn-sm" onclick="navigateTo('report-stock')">عرض التقرير الكامل</button>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>رقم الصنف</th><th>اسم الصنف</th><th>المجموعة</th><th>الرصيد الحالي</th><th>مؤشر المخزون</th></tr></thead>
+              <tbody id="dashboard-items-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- UNITS PAGE -->
+    <div class="page" id="page-units">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><div class="icon">📏</div> وحدات القياس</div>
+          <button class="btn btn-primary" onclick="openAddUnit()">➕ إضافة وحدة</button>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>رقم الوحدة</th><th>اسم الوحدة</th><th>الإجراءات</th></tr></thead>
+              <tbody id="units-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GROUPS PAGE -->
+    <div class="page" id="page-groups">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><div class="icon">🗂️</div> مجموعات الأصناف</div>
+          <button class="btn btn-primary" onclick="openAddGroup()">➕ إضافة مجموعة</button>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>رقم المجموعة</th><th>اسم المجموعة</th><th>الإجراءات</th></tr></thead>
+              <tbody id="groups-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ITEMS PAGE -->
+    <div class="page" id="page-items">
+      <div class="filter-bar">
+        <div class="search-input-wrapper">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="item-search" class="form-control" placeholder="بحث عن صنف..." oninput="filterItems()">
+        </div>
+        <div class="form-group" style="margin:0;min-width:180px">
+          <select id="item-filter-group" class="form-control" onchange="filterItems()"></select>
+        </div>
+        <button class="btn btn-primary" onclick="openAddItem()">➕ إضافة صنف</button>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title"><div class="icon">📦</div> الأصناف</div></div>
+        <div class="card-body" style="padding:0">
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>رقم الصنف</th><th>اسم الصنف</th><th>المجموعة</th><th>الوحدة</th><th>الرصيد الحالي</th><th>الرصيد الافتتاحي</th><th>الحد الأدنى</th><th>الإجراءات</th></tr></thead>
+              <tbody id="items-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CUSTOMERS PAGE -->
+    <div class="page" id="page-customers">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><div class="icon">👥</div> العملاء</div>
+          <button class="btn btn-primary" onclick="openAddCustomer()">➕ إضافة عميل</button>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>رقم العميل</th><th>اسم العميل</th><th>الهاتف</th><th>العنوان</th><th>الملاحظات</th><th>الإجراءات</th></tr></thead>
+              <tbody id="customers-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUPPLIERS PAGE -->
+    <div class="page" id="page-suppliers">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><div class="icon">🏭</div> الموردون</div>
+          <button class="btn btn-primary" onclick="openAddSupplier()">➕ إضافة مورد</button>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>رقم المورد</th><th>اسم المورد</th><th>الهاتف</th><th>العنوان</th><th>الملاحظات</th><th>الإجراءات</th></tr></thead>
+              <tbody id="suppliers-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WAREHOUSES PAGE -->
+    <div class="page" id="page-warehouses">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><div class="icon">🏪</div> المخازن</div>
+          <button class="btn btn-primary" onclick="openAddWarehouse()">➕ إضافة مخزن</button>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>رقم المخزن</th><th>اسم المخزن</th><th>الموقع</th><th>الملاحظات</th><th>الإجراءات</th></tr></thead>
+              <tbody id="warehouses-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUPPLY PAGE -->
+    <div class="page" id="page-supply">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><div class="icon" style="background:#27AE60">⬇️</div> عمليات التوريد</div>
+          <button class="btn btn-success" onclick="openNewOperation('توريد')">➕ عملية توريد جديدة</button>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>رقم العملية</th><th>المرجع</th><th>التاريخ</th><th>المورد</th><th>المخزن</th><th>الأصناف</th><th>الإجراءات</th></tr></thead>
+              <tbody id="supply-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ISSUE PAGE -->
+    <div class="page" id="page-issue">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><div class="icon" style="background:#E67E22">⬆️</div> عمليات الصرف</div>
+          <button class="btn btn-warning" onclick="openNewOperation('صرف')">➕ عملية صرف جديدة</button>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>رقم العملية</th><th>المرجع</th><th>التاريخ</th><th>العميل</th><th>المخزن</th><th>الأصناف</th><th>الإجراءات</th></tr></thead>
+              <tbody id="issue-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRANSFER PAGE -->
+    <div class="page" id="page-transfer">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><div class="icon" style="background:#3498DB">🔄</div> عمليات التحويل</div>
+          <button class="btn btn-info" onclick="openNewOperation('تحويل')">➕ عملية تحويل جديدة</button>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>رقم العملية</th><th>المرجع</th><th>التاريخ</th><th>من/إلى</th><th>المخزن</th><th>الأصناف</th><th>الإجراءات</th></tr></thead>
+              <tbody id="transfer-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STOCK REPORT -->
+    <div class="page" id="page-report-stock">
+      <!-- إحصائيات سريعة -->
+      <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:160px;background:linear-gradient(135deg,#1E3A5F,#2E86AB);color:white;border-radius:12px;padding:16px 20px;">
+          <div style="font-size:11px;opacity:0.8;margin-bottom:4px;">إجمالي الأصناف</div>
+          <div id="stat-total-items" style="font-size:26px;font-weight:700;">-</div>
+        </div>
+        <div style="flex:1;min-width:160px;background:linear-gradient(135deg,#27AE60,#2ECC71);color:white;border-radius:12px;padding:16px 20px;">
+          <div style="font-size:11px;opacity:0.8;margin-bottom:4px;">أصناف متوفرة</div>
+          <div id="stat-ok-items" style="font-size:26px;font-weight:700;">-</div>
+        </div>
+        <div style="flex:1;min-width:160px;background:linear-gradient(135deg,#E67E22,#F39C12);color:white;border-radius:12px;padding:16px 20px;">
+          <div style="font-size:11px;opacity:0.8;margin-bottom:4px;">تحت الحد الأدنى</div>
+          <div id="stat-low-items" style="font-size:26px;font-weight:700;">-</div>
+        </div>
+        <div style="flex:1;min-width:160px;background:linear-gradient(135deg,#E74C3C,#C0392B);color:white;border-radius:12px;padding:16px 20px;">
+          <div style="font-size:11px;opacity:0.8;margin-bottom:4px;">أصناف نافدة</div>
+          <div id="stat-zero-items" style="font-size:26px;font-weight:700;">-</div>
+        </div>
+      </div>
+
+      <!-- شريط الفلترة -->
+      <div class="filter-bar" style="flex-wrap:wrap;">
+        <div class="form-group" style="margin:0;min-width:180px">
+          <label class="form-label">المجموعة</label>
+          <select id="rpt-stock-group" class="form-control" onchange="filterStockReport()"></select>
+        </div>
+        <div class="form-group" style="margin:0;min-width:180px">
+          <label class="form-label">المخزن</label>
+          <select id="rpt-stock-warehouse" class="form-control" onchange="filterStockReport()"></select>
+        </div>
+        <div class="form-group" style="margin:0;display:flex;align-items:center;gap:8px;padding-top:20px">
+          <input type="checkbox" id="rpt-low-stock" onchange="filterStockReport()" style="width:18px;height:18px">
+          <label for="rpt-low-stock" style="font-size:13px;font-weight:600;color:#E74C3C">⚠️ تحت الحد فقط</label>
+        </div>
+        <button class="btn btn-primary" onclick="filterStockReport()" style="margin-top:20px">🔍 تطبيق</button>
+        <button class="btn btn-danger" onclick="exportStockPDF()" style="margin-top:20px;background:#E74C3C;border-color:#E74C3C;">📄 طباعة PDF</button>
+        <button class="btn btn-success" onclick="exportStockExcel()" style="margin-top:20px;background:#27AE60;border-color:#27AE60;">📅 تصدير Excel</button>
+        <span id="stock-report-count" style="color:#6c757d;font-size:13px;padding-top:20px"></span>
+      </div>
+
+      <!-- الجدول الديناميكي -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><div class="icon">📊</div> تقرير المخزون التفصيلي حسب المخازن</div>
+          <div style="font-size:12px;color:#6c757d;">* الأعمدة الملونة بالأزرق تمثل كل مخزن على حدة</div>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div class="table-wrapper">
+            <table>
+              <thead id="stock-report-head"></thead>
+              <tbody id="stock-report-body"></tbody>
+              <tfoot id="stock-report-foot"></tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MOVEMENTS REPORT -->
+    <div class="page" id="page-report-movements">
+      <div class="filter-bar">
+        <div class="form-group" style="margin:0;min-width:200px">
+          <label class="form-label">الصنف</label>
+          <select id="rpt-mov-item" class="form-control"></select>
+        </div>
+        <div class="form-group" style="margin:0;min-width:150px">
+          <label class="form-label">نوع العملية</label>
+          <select id="rpt-mov-type" class="form-control">
+            <option value="">الكل</option>
+            <option value="توريد">توريد</option>
+            <option value="صرف">صرف</option>
+            <option value="تحويل">تحويل</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">من تاريخ</label>
+          <input type="date" id="rpt-mov-from" class="form-control">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">إلى تاريخ</label>
+          <input type="date" id="rpt-mov-to" class="form-control">
+        </div>
+        <button class="btn btn-primary" onclick="filterMovementsReport()" style="margin-top:20px">🔍 بحث</button>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><div class="icon">📈</div> تقرير حركة الأصناف</div>
+          <div style="display:flex;gap:16px;font-size:13px;color:#6c757d;">
+            <span>إجمالي الكمية: <strong id="mov-total-qty" style="color:#1E3A5F">0</strong></span>
+            <span>إجمالي المبلغ: <strong id="mov-total-amount" style="color:#27AE60">0</strong></span>
+          </div>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>رقم العملية</th><th>النوع</th><th>التاريخ</th><th>المرجع</th><th>المورد/العميل</th><th>الصنف</th><th>الوحدة</th><th>الكمية</th><th>الإجمالي</th></tr></thead>
+              <tbody id="movements-report-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OPERATIONS REPORT -->
+    <div class="page" id="page-report-operations">
+      <div class="filter-bar">
+        <div class="form-group" style="margin:0;min-width:150px">
+          <label class="form-label">نوع العملية</label>
+          <select id="rpt-ops-type" class="form-control">
+            <option value="">الكل</option>
+            <option value="توريد">توريد</option>
+            <option value="صرف">صرف</option>
+            <option value="تحويل">تحويل</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">من تاريخ</label>
+          <input type="date" id="rpt-ops-from" class="form-control">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">إلى تاريخ</label>
+          <input type="date" id="rpt-ops-to" class="form-control">
+        </div>
+        <button class="btn btn-primary" onclick="filterOperationsReport()" style="margin-top:20px">🔍 بحث</button>
+        <span id="ops-report-count" style="color:#6c757d;font-size:13px;padding-top:20px"></span>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title"><div class="icon">📋</div> تقرير العمليات</div></div>
+        <div class="card-body" style="padding:0">
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>رقم العملية</th><th>النوع</th><th>التاريخ</th><th>المرجع</th><th>المورد/العميل</th><th>عدد الأصناف</th><th>الإجراءات</th></tr></thead>
+              <tbody id="ops-report-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- USERS PAGE -->
+    <div class="page" id="page-users">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><div class="icon">👤</div> إدارة المستخدمين</div>
+          <button class="btn btn-primary" onclick="openAddUser()">➕ إضافة مستخدم</button>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>رقم</th><th>اسم المستخدم</th><th>الاسم الكامل</th><th>الدور</th><th>البريد</th><th>الحالة</th><th>آخر دخول</th><th>الإجراءات</th></tr></thead>
+              <tbody id="users-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTIVITY LOG PAGE -->
+    <div class="page" id="page-activity">
+      <div class="filter-bar">
+        <div class="form-group" style="margin:0">
+          <label class="form-label">من تاريخ</label>
+          <input type="date" id="act-from" class="form-control">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">إلى تاريخ</label>
+          <input type="date" id="act-to" class="form-control">
+        </div>
+        <button class="btn btn-primary" onclick="loadActivityLog()" style="margin-top:20px">🔍 بحث</button>
+        <button class="btn btn-outline" onclick="loadActivityLog()" style="margin-top:20px">🔄 تحديث</button>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title"><div class="icon">📜</div> سجل نشاط المستخدمين</div></div>
+        <div class="card-body" style="padding:0">
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>رقم</th><th>المستخدم</th><th>الإجراء</th><th>التفاصيل</th><th>التاريخ والوقت</th><th>عنوان IP</th></tr></thead>
+              <tbody id="activity-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BACKUP PAGE -->
+    <div class="page" id="page-backup">
+      <div class="backup-grid">
+        <div class="card">
+          <div class="card-header"><div class="card-title"><div class="icon">💾</div> إنشاء نسخة احتياطية</div></div>
+          <div class="card-body" style="text-align:center;padding:30px;">
+            <div style="font-size:64px;margin-bottom:16px;">💾</div>
+            <p style="color:#6c757d;margin-bottom:20px;">سيتم تنزيل ملف Excel يحتوي على جميع البيانات</p>
+            <button class="btn btn-primary btn-lg" onclick="createBackup()">⬇️ إنشاء وتنزيل نسخة احتياطية</button>
+            <br><br>
+            <button class="btn btn-outline" onclick="downloadCurrentDB()">📥 تنزيل قاعدة البيانات الحالية</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title"><div class="icon">🔄</div> استعادة نسخة احتياطية</div></div>
+          <div class="card-body" style="padding:30px;">
+            <div class="alert alert-warning">⚠️ تحذير: ستُستبدل جميع البيانات الحالية بالنسخة المستعادة</div>
+            <div class="form-group">
+              <label class="form-label">اختر ملف Excel للاستعادة</label>
+              <input type="file" id="restore-file" class="form-control" accept=".xlsx">
+            </div>
+            <button class="btn btn-warning btn-lg" onclick="restoreBackup()">🔄 استعادة البيانات</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><div class="icon">📁</div> النسخ الاحتياطية المحفوظة</div>
+          <button class="btn btn-outline btn-sm" onclick="loadBackup()">🔄 تحديث</button>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>اسم الملف</th><th>التاريخ</th><th>الحجم</th><th>الإجراءات</th></tr></thead>
+              <tbody id="backup-list-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS PAGE -->
+    <div class="page" id="page-settings">
+      <div class="card">
+        <div class="card-header"><div class="card-title"><div class="icon">⚙️</div> إعدادات النظام</div></div>
+        <div class="card-body">
+          <div class="form-row form-row-2">
+            <div class="form-group">
+              <label class="form-label">اسم الشركة / المنشأة</label>
+              <input type="text" id="set-company" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">اسم المدير العام</label>
+              <input type="text" id="set-manager" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">العنوان</label>
+              <input type="text" id="set-address" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">رقم الهاتف</label>
+              <input type="text" id="set-phone" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">العملة</label>
+              <input type="text" id="set-currency" class="form-control" placeholder="ريال">
+            </div>
+          </div>
+          <div style="margin-top:20px;">
+            <button class="btn btn-primary btn-lg" onclick="saveSettings()">💾 حفظ الإعدادات</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end page-content -->
+</div><!-- end main-content -->
+
+<script src="/js/app.js"></script>
+<script src="/js/operations.js"></script>
+</body>
+</html>
